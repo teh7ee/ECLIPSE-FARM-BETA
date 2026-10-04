@@ -79,7 +79,7 @@ if not RunService then
 		FastAttackDelay = 0,
 		attackmobs = true,
 		BringMonster = true,
-		BringMonsterRadius = 350,
+		BringMonsterRadius = 400,
 		MasteryFarm = false,
 		MasteryMethod = "Blox Fruit",
 		HealthMob = 50,
@@ -2549,9 +2549,7 @@ Restock: %s
 		local n2 = 0
 
 		tbl8.BringEnemies = function(arg, arg2)
-			if not tbl.BringMonster then
-				return
-			end
+			tbl.BringMonster = true -- always stack when this is called
 			local humanoidRootPart2 = character and character:FindFirstChild("HumanoidRootPart")
 			local humanoidRootPart3 = arg2 and (arg2:FindFirstChild("HumanoidRootPart") or arg2.PrimaryPart)
 			if not humanoidRootPart2 or not humanoidRootPart3 then
@@ -2563,7 +2561,6 @@ Restock: %s
 			end
 			n = now
 			local n3 = tonumber(tbl.BringMonsterRadius) or 350
-			if tbl.AutoFarmBoss or tbl.AutoKillAllBosses or tbl.AutoFarmPrince or tbl.AutoTyrantOfTheSkies then n3 = math.max(n3, 400) end
 			local n4 = math.clamp(n3 + 50, 100, 500)
 
 			if now - n2 > 3 then
@@ -2588,7 +2585,7 @@ Restock: %s
 				end
 			end
 
-			if #tagged >= 14 then
+			if #tagged >= 8 then
 				return
 			end
 			local tbl9 = {}
@@ -2638,7 +2635,7 @@ Restock: %s
 							if not flag4 then
 								v21:AddTag("QuantumBringTag")
 								n5 += 1
-								if n5 >= 6 then
+								if n5 >= 4 then
 									return
 								end
 								continue
@@ -6117,19 +6114,9 @@ Restock: %s
 
 				utilities:AutoHaki()
 
-				-- Always stack mobs for farm (boss packs / cakes / bones / tyrant minions)
 				if arg3 ~= false then
-					local shouldBring = tbl.BringMonster
-					-- force bring on for these farm modes even if user forgot toggle
-					if tbl.AutoFarm or tbl.AutoFarmBones or tbl.AutoFarmBoss or tbl.AutoKillAllBosses
-						or tbl.AutoFarmPrince or tbl.AutoDoughKing or tbl.AutoTyrantOfTheSkies
-						or tbl.AutoMaterial or tbl.AutoFactory or tbl.AutoFarmPirateRaid
-						or tbl.AutoTaskEliteHunter then
-						shouldBring = true
-					end
-					if shouldBring then
-						utilities:BringEnemies(arg2)
-					end
+					tbl.BringMonster = true
+					utilities:BringEnemies(arg2)
 				end
 			end
 		end }
@@ -6316,6 +6303,8 @@ Restock: %s
 
 	tbl6.SubFunction = fn26()
 	local subFunction = tbl6.SubFunction
+
+
 	tbl6.Functions = tbl6.Functions or {}
 	tbl6.Loops = tbl6.Loops or {}
 	tbl6.FunctionList = tbl6.FunctionList or {}
@@ -14664,18 +14653,9 @@ Restock: %s
 	fn27("CoreSetup")
 	fn27("CombatHooks")
 	fn27("RuntimeServices")
+
+
 	
-	-- Force bring while major farms active
-	task.spawn(function()
-		while task.wait(1) do
-			if not getgenv().MoonEclipseActive then continue end
-			if tbl and (tbl.AutoFarm or tbl.AutoFarmBones or tbl.AutoFarmBoss or tbl.AutoKillAllBosses
-				or tbl.AutoFarmPrince or tbl.AutoDoughKing or tbl.AutoTyrantOfTheSkies
-				or tbl.AutoMaterial) then
-				tbl.BringMonster = true
-			end
-		end
-	end)
 
 	task.spawn(fn27, "LoadLibrary")
 
@@ -14683,7 +14663,7 @@ Restock: %s
 		task.wait(1.5)
 		tbl6:SendNotify("Moon Eclipse Fully Loaded", "All Functions, Modules, Dependencies, Successfully loaded.", 8)
 		task.wait(1)
-		tbl6:SendNotify("Moon Eclipse", "Eclipse Script is 100% Free and Keyless", 8)
+		tbl6:SendNotify("Moon Eclipse", "EClipse Farm script is 100% Free and Keyless", 8)
 
 		pcall(function()
 			loadstring(game:HttpGet("https://raw.githubusercontent.com/flazhy/QuantumOnyx/refs/heads/main/Util/BloxFruitModule/Preload/Weebo.lua"))()
