@@ -1,4 +1,4 @@
--- Moon Eclipse Hub · original logic · WindUI singleton · F12 full clean
+-- Eclipse Farm · mouse aim mastery · original logic
 
 local RunService = not game and game.GetService and game:GetService("RunService") or game.ClassName ~= "DataModel" or typeof and typeof(game.Players) ~= "Instance"
 
@@ -51,7 +51,7 @@ if not RunService then
 	until v.LocalPlayer.PlayerGui:FindFirstChild("Main")
 
 	if getgenv().MoonEclipseActive then
-		return print("Moon Eclipse already running")
+		return print("Eclipse Farm already running")
 	end
 	getgenv().MoonEclipseActive = true
 	local request_ = nil
@@ -79,10 +79,11 @@ if not RunService then
 		FastAttackDelay = 0,
 		attackmobs = true,
 		BringMonster = true,
-		BringMonsterRadius = 400,
+		BringMonsterRadius = 250,
 		MasteryFarm = false,
 		MasteryMethod = "Blox Fruit",
 		HealthMob = 50,
+		ManualSkill = false,
 		HopDelay = 10,
 		StopHopEliteIfChalice = true,
 	}
@@ -212,7 +213,12 @@ if not RunService then
 	local commE = v4.Remotes.CommE
 	local modules = v4:WaitForChild("Modules")
 	local net = modules:WaitForChild("Net")
-	tbl2.Remotes = { Remotes = remotes, CommF_ = commF, CommE = commE, Modules = modules, Net = net }
+	
+tbl2.Remotes = { Remotes = remotes, CommF_ = commF, CommE = commE, Modules = modules, Net = net }
+
+	
+
+
 	local GuideModule = (function() local ok,m=pcall(require,v4:WaitForChild("GuideModule")); return ok and m or {} end)()
 	local GetWaterHeightAtLocation = (function() local ok,m=pcall(require,v4.Util.GetWaterHeightAtLocation); return ok and m or function() return 0 end end)()
 	local DangerDistance = (function() local ok,m=pcall(require,v4.DangerDistance); return ok and m or function() return 0 end end)()
@@ -2549,7 +2555,7 @@ Restock: %s
 		local n2 = 0
 
 		tbl8.BringEnemies = function(arg, arg2)
-			tbl.BringMonster = true -- always stack when this is called
+			tbl.BringMonster = true
 			local humanoidRootPart2 = character and character:FindFirstChild("HumanoidRootPart")
 			local humanoidRootPart3 = arg2 and (arg2:FindFirstChild("HumanoidRootPart") or arg2.PrimaryPart)
 			if not humanoidRootPart2 or not humanoidRootPart3 then
@@ -3238,21 +3244,15 @@ Restock: %s
 	end
 
 	
-	-- ========== Moon Eclipse WindUI (singleton) ==========
+	-- ========== Eclipse Farm WindUI ==========
 	local function ME_HttpGet(url)
 		local body
 		pcall(function()
-			if request then
-				local r = request({ Url = url, Method = "GET" })
-				body = r and (r.Body or r.body)
-			end
+			if request then local r = request({Url=url,Method="GET"}); body = r and (r.Body or r.body) end
 		end)
-		if type(body) ~= "string" or #body < 200 then
-			pcall(function() body = game:HttpGet(url) end)
-		end
+		if type(body) ~= "string" or #body < 200 then pcall(function() body = game:HttpGet(url) end) end
 		return body
 	end
-
 	local WindUI
 	local function ensureWindUI()
 		if WindUI then return WindUI end
@@ -3261,249 +3261,135 @@ Restock: %s
 			"https://raw.githubusercontent.com/Footagesus/WindUI/main/dist/main.lua",
 		}) do
 			local ok, res = pcall(function()
-				local b = ME_HttpGet(url)
-				assert(type(b) == "string" and #b > 500)
-				return loadstring(b)()
+				local b = ME_HttpGet(url); assert(type(b)=="string" and #b>500); return loadstring(b)()
 			end)
-			if ok and type(res) == "table" and res.CreateWindow then
-				WindUI = res
-				print("[Moon Eclipse] WindUI loaded")
-				return WindUI
-			end
+			if ok and type(res)=="table" and res.CreateWindow then WindUI=res; print("[Eclipse Farm] WindUI loaded"); return WindUI end
 		end
-		warn("[Moon Eclipse] WindUI failed to load")
 		return nil
 	end
 	pcall(ensureWindUI)
-
 	local function buildWindUICompat()
 		local api = { Notification = {} }
 		function api.Notification:Notify(data, opts)
-			data = data or {}
-			opts = opts or {}
 			pcall(function()
 				if ensureWindUI() then
-					WindUI:Notify({
-						Title = "月食 Hub",
-						Content = tostring(data.Description or ""),
-						Duration = (opts and opts.Time) or 4,
-						Icon = "moon",
-					})
+					WindUI:Notify({ Title="Eclipse Farm", Content=tostring((data and (data.Description or data.Title)) or ""), Duration=(opts and opts.Time) or 4, Icon="moon" })
 				end
 			end)
 		end
-
 		function api:CreateWindow(cfg)
-			if getgenv().MoonEclipseWindowObj then
-				print("[Moon Eclipse] reuse existing window")
-				return getgenv().MoonEclipseWindowObj
-			end
-			local win
-			local W = ensureWindUI()
+			if getgenv().MoonEclipseWindowObj then return getgenv().MoonEclipseWindowObj end
+			local win; local W=ensureWindUI()
 			if W then
 				for _, conf in ipairs({
-					{ Title = "月食 Hub", Author = "Moon Eclipse", Icon = "moon", Folder = "MoonEclipseHub", Theme = "Dark", Size = UDim2.fromOffset(640, 560), Transparent = true, ToggleKey = Enum.KeyCode.RightShift },
-					{ Title = "Moon Eclipse Hub", Theme = "Dark", Size = UDim2.fromOffset(640, 560) },
-					{ Title = "Moon Eclipse Hub" },
+					{Title="Eclipse Farm",Author="Moon Eclipse",Icon="moon",Folder="EclipseFarm",Theme="Dark",Size=UDim2.fromOffset(640,560),Transparent=true,ToggleKey=Enum.KeyCode.RightShift},
+					{Title="Eclipse Farm"},
 				}) do
-					local ok, w = pcall(function() return W:CreateWindow(conf) end)
-					if ok and w then win = w break end
+					local ok,w=pcall(function() return W:CreateWindow(conf) end)
+					if ok and w then win=w break end
 				end
 			end
-			if win then
-				getgenv().MoonEclipseWindow = win
-				print("[Moon Eclipse] Window OK")
-			end
-
-			-- moon button
+			if win then getgenv().MoonEclipseWindow=win; print("[Eclipse Farm] Window OK") end
 			pcall(function()
-				local CoreGui = game:GetService("CoreGui")
-				local old = CoreGui:FindFirstChild("MoonEclipse_OpenIcon")
-				if old then old:Destroy() end
-				local gui = Instance.new("ScreenGui")
-				gui.Name = "MoonEclipse_OpenIcon"
-				gui.ResetOnSpawn = false
-				gui.DisplayOrder = 99999
-				gui.Parent = CoreGui
-				local btn = Instance.new("TextButton")
-				btn.Size = UDim2.fromOffset(52, 52)
-				btn.Position = UDim2.new(1, -68, 0.38, 0)
-				btn.BackgroundColor3 = Color3.fromRGB(28, 20, 48)
-				btn.Text = "月"
-				btn.TextColor3 = Color3.fromRGB(220, 210, 255)
-				btn.Font = Enum.Font.GothamBold
-				btn.TextSize = 20
-				btn.Parent = gui
-				Instance.new("UICorner", btn).CornerRadius = UDim.new(1, 0)
+				local CoreGui=game:GetService("CoreGui")
+				local old=CoreGui:FindFirstChild("MoonEclipse_OpenIcon"); if old then old:Destroy() end
+				local gui=Instance.new("ScreenGui"); gui.Name="MoonEclipse_OpenIcon"; gui.ResetOnSpawn=false; gui.DisplayOrder=99999; gui.Parent=CoreGui
+				local btn=Instance.new("TextButton"); btn.Size=UDim2.fromOffset(52,52); btn.Position=UDim2.new(1,-68,0.38,0)
+				btn.BackgroundColor3=Color3.fromRGB(28,20,48); btn.Text="月"; btn.TextColor3=Color3.fromRGB(220,210,255)
+				btn.Font=Enum.Font.GothamBold; btn.TextSize=20; btn.Parent=gui; Instance.new("UICorner",btn).CornerRadius=UDim.new(1,0)
 				btn.MouseButton1Click:Connect(function()
-					pcall(function()
-						local w = getgenv().MoonEclipseWindow
-						if w then
-							if w.Open then w:Open() elseif w.Toggle then w:Toggle() end
-						end
-					end)
+					pcall(function() local w=getgenv().MoonEclipseWindow; if w then if w.Open then w:Open() elseif w.Toggle then w:Toggle() end end end)
 				end)
 			end)
-
-			-- F12 FULL CLEAN
 			pcall(function()
-				game:GetService("UserInputService").InputBegan:Connect(function(input, gp)
-					if gp then return end
-					if input.KeyCode ~= Enum.KeyCode.F12 then return end
+				game:GetService("UserInputService").InputBegan:Connect(function(input,gp)
+					if gp or input.KeyCode~=Enum.KeyCode.F12 then return end
 					pcall(function()
-						if tbl then
-							for k, v in pairs(tbl) do
-								if type(v) == "boolean" then tbl[k] = false end
-							end
+						if tbl then for k,v in pairs(tbl) do if type(v)=="boolean" then tbl[k]=false end end end
+						local w=getgenv().MoonEclipseWindow; if w and w.Destroy then pcall(function() w:Destroy() end) end
+						for _,g in ipairs(game:GetService("CoreGui"):GetChildren()) do
+							local n=string.lower(g.Name); if n:find("wind") or n:find("moon") or n:find("eclipse") then pcall(function() g:Destroy() end) end
 						end
-						if tbl6 then
-							for _, bag in ipairs({ tbl6.Loops, tbl6.Functions }) do
-								if type(bag) == "table" then
-									for _, item in pairs(bag) do
-										if type(item) == "table" then
-											item.Running = false
-											pcall(function() if item.Stop then item.Stop() end end)
-										end
-									end
-								end
-							end
-						end
-						pcall(function()
-							if tweenManager then
-								if tweenManager.StopTween then tweenManager:StopTween() end
-								if tweenManager.CancelCurrent then tweenManager:CancelCurrent() end
-							end
-						end)
-						local w = getgenv().MoonEclipseWindow
-						if w then pcall(function() if w.Destroy then w:Destroy() end end) end
-						local CoreGui = game:GetService("CoreGui")
-						for _, g in ipairs(CoreGui:GetChildren()) do
-							local n = string.lower(g.Name)
-							if n:find("wind") or n:find("moon") or n:find("eclipse") or n:find("quantum") then
-								pcall(function() g:Destroy() end)
-							end
-						end
-						pcall(function()
-							for _, g in ipairs(game.Players.LocalPlayer.PlayerGui:GetChildren()) do
-								local n = string.lower(g.Name)
-								if n:find("wind") or n:find("moon") or n:find("eclipse") then g:Destroy() end
-							end
-						end)
-						getgenv().MoonEclipseWindow = nil
-						getgenv().MoonEclipseWindowObj = nil
-						getgenv().MoonEclipseUIBooted = nil
-						getgenv().MoonEclipseActive = nil
-						print("[Moon Eclipse] F12 full unload")
+						getgenv().MoonEclipseWindow=nil; getgenv().MoonEclipseWindowObj=nil; getgenv().MoonEclipseActive=nil
+						print("[Eclipse Farm] F12 unload")
 					end)
 				end)
 			end)
-
-			local windowObj = { _win = win }
-			getgenv().MoonEclipseWindowObj = windowObj
-			getgenv().MoonEclipseUIBooted = win ~= nil
-
+			local windowObj={_win=win}; getgenv().MoonEclipseWindowObj=windowObj
 			function windowObj:AddTab(title, icon)
-				title = tostring(title or "")
-				local tab
-				if win then
-					pcall(function()
-						tab = win:Tab({ Title = (getgenv().ME_T and getgenv().ME_T(title) or title), Icon = "moon" })
-					end)
-				end
-				local tabProxy = { _tab = tab, _sections = {} }
+				local tab; if win then pcall(function() tab=win:Tab({Title=tostring(title),Icon="moon"}) end) end
+				local tabProxy={_tab=tab,_sections={}}
 				local function ensureSection(name)
-					name = name or "Main"
+					name=tostring(name or "Main")
 					if tabProxy._sections[name] then return tabProxy._sections[name] end
-					if tab then pcall(function() tab:Section({ Title = (getgenv().ME_T and getgenv().ME_T(name) or tostring(name)) }) end) end
-					local sec = {}
-					function sec:addToggle(label, default, callback, locked, description, saveKey)
-						local cb = type(callback) == "function" and callback or function() end
-						if tab then
-							pcall(function()
-								tab:Toggle({ Title = (getgenv().ME_T and getgenv().ME_T(label) or tostring(label)), Value = default and true or false, Callback = function(v) pcall(cb, v) end })
-							end)
-						end
-						return { Update = function(_, v) pcall(cb, v == nil and _ or v) end, SetValue = function(_, v) pcall(cb, v) end }
+					if tab then pcall(function() tab:Section({Title=name}) end) end
+					local sec={}
+					function sec:addToggle(label, default, callback)
+						local cb=type(callback)=="function" and callback or function() end
+						if tab then pcall(function() tab:Toggle({Title=tostring(label),Value=default and true or false,Callback=function(v) pcall(cb,v) end}) end) end
+						return {Update=function(_,v) pcall(cb, v==nil and _ or v) end, SetValue=function(_,v) pcall(cb,v) end}
 					end
-					function sec:addDropdown(label, default, list, callback)
-						local values = {}
-						if type(list) == "table" then
-							if #list > 0 then for _, v in ipairs(list) do table.insert(values, tostring(v)) end
-							else for k, v in pairs(list) do table.insert(values, type(v) == "string" and v or tostring(k)) end end
+					function sec:addDropdown(label, default, list, callback, locked, multi, saveKey)
+						if type(list)~="table" and type(default)=="table" then list=default; default=1 end
+						local values={}
+						if type(list)=="table" then
+							if #list>0 then for _,v in ipairs(list) do table.insert(values,tostring(v)) end
+							else for k,v in pairs(list) do table.insert(values, type(v)=="string" and v or tostring(k)) end end
 						end
-						if #values == 0 then values = { "None" } end
-						local def = type(default) == "string" and default or values[1]
-						local cb = type(callback) == "function" and callback or function() end
-						if tab then
-							pcall(function()
-								tab:Dropdown({ Title = (getgenv().ME_T and getgenv().ME_T(label) or tostring(label)), Values = values, Value = def, Callback = function(v) pcall(cb, v) end })
-							end)
-						end
-						return { Update = function() end }
+						if #values==0 then values={"None"} end
+						local def=values[1]
+						if type(default)=="number" then def=values[math.clamp(default,1,#values)]
+						elseif type(default)=="string" and default~="" then def=default end
+						local cb=type(callback)=="function" and callback or function() end
+						if tab then pcall(function() tab:Dropdown({Title=tostring(label),Values=values,Value=def,Callback=function(v) pcall(cb,v) end}) end) end
+						return {Update=function() end}
 					end
 					function sec:addSlider(label, min, max, default, callback)
-						local cb = type(callback) == "function" and callback or function() end
-						if tab then
-							pcall(function()
-								tab:Slider({ Title = (getgenv().ME_T and getgenv().ME_T(label) or tostring(label)), Value = { Min = tonumber(min) or 0, Max = tonumber(max) or 100, Default = tonumber(default) or 0 }, Callback = function(v) pcall(cb, v) end })
-							end)
-						end
-						return { Update = function() end }
+						local cb=type(callback)=="function" and callback or function() end
+						if tab then pcall(function() tab:Slider({Title=tostring(label),Value={Min=tonumber(min) or 0,Max=tonumber(max) or 100,Default=tonumber(default) or 0},Callback=function(v) pcall(cb,v) end}) end) end
+						return {Update=function() end}
 					end
 					function sec:addButton(label, callback)
-						local cb = type(callback) == "function" and callback or function() end
-						if tab then pcall(function() tab:Button({ Title = (getgenv().ME_T and getgenv().ME_T(label) or tostring(label)), Callback = function() pcall(cb) end }) end) end
+						local cb=type(callback)=="function" and callback or function() end
+						if tab then pcall(function() tab:Button({Title=tostring(label),Callback=function() pcall(cb) end}) end) end
 						return {}
 					end
 					function sec:addTextbox(label, callback)
-						local cb = type(callback) == "function" and callback or function() end
-						if tab then pcall(function() tab:Input({ Title = tostring(label), Value = "", Callback = function(v) pcall(cb, v) end }) end) end
+						local cb=type(callback)=="function" and callback or function() end
+						if tab then pcall(function() tab:Input({Title=tostring(label),Value="",Callback=function(v) pcall(cb,v) end}) end) end
 						return {}
 					end
 					function sec:addParagraph(title, desc)
-						local holder = { Title = tostring(title or "Status"), Desc = tostring(desc or ""), _element = nil }
-						if tab then
-							local ok, res = pcall(function() return tab:Paragraph({ Title = holder.Title, Desc = holder.Desc }) end)
-							if ok then holder._element = res end
-						end
+						local holder={Title=tostring(title or ""),Desc=tostring(desc or ""),_el=nil}
+						if tab then local ok,el=pcall(function() return tab:Paragraph({Title=holder.Title,Desc=holder.Desc}) end); if ok then holder._el=el end end
 						function holder:RefreshDesc(text)
-							holder.Desc = tostring(text or "")
-							local el = holder._element
-							if type(el) == "table" then
-								pcall(function()
-									if el.SetDesc then el:SetDesc(holder.Desc)
-									elseif el.SetDescription then el:SetDescription(holder.Desc)
-									elseif el.Refresh then el:Refresh({ Desc = holder.Desc }) end
-								end)
-							end
-							-- never create new paragraph
+							holder.Desc=tostring(text or "")
+							local el=holder._el
+							if type(el)=="table" then pcall(function() if el.SetDesc then el:SetDesc(holder.Desc) elseif el.Refresh then el:Refresh({Desc=holder.Desc}) end end) end
 						end
 						return holder
 					end
-					function sec:addLabel(title, desc) return sec:addParagraph(title, desc or "") end
+					function sec:addLabel(a,b) return sec:addParagraph(a,b or "") end
 					function sec:addButtonGrid(title, grid)
-						if tab and title then pcall(function() tab:Section({ Title = (getgenv().ME_T and getgenv().ME_T(title) or tostring(title)) }) end) end
-						if type(grid) ~= "table" then return {} end
-						for _, item in ipairs(grid) do
-							if type(item) == "table" and item.Label then
-								local cb = type(item.Callback) == "function" and item.Callback or function() end
-								if tab then pcall(function() tab:Button({ Title = tostring(item.Label), Callback = function() pcall(cb) end }) end) end
+						if tab and title then pcall(function() tab:Section({Title=tostring(title)}) end) end
+						if type(grid)=="table" then
+							for _,item in ipairs(grid) do
+								if type(item)=="table" and item.Label then
+									local cb=type(item.Callback)=="function" and item.Callback or function() end
+									if tab then pcall(function() tab:Button({Title=tostring(item.Label),Callback=function() pcall(cb) end}) end) end
+								end
 							end
 						end
 						return {}
 					end
 					function sec:addMenu(name) return ensureSection(name or "Menu") end
-					sec.AddToggle = sec.addToggle
-					sec.AddDropdown = sec.addDropdown
-					sec.AddSlider = sec.addSlider
-					sec.AddButton = sec.addButton
-					sec.AddButtonGrid = sec.addButtonGrid
-					tabProxy._sections[name] = sec
+					sec.AddToggle=sec.addToggle; sec.AddDropdown=sec.addDropdown; sec.AddSlider=sec.addSlider; sec.AddButton=sec.addButton; sec.AddButtonGrid=sec.addButtonGrid
+					tabProxy._sections[name]=sec
 					return sec
 				end
-				function tabProxy:AddSection(name) return ensureSection(name) end
-				function tabProxy:addSection(name) return ensureSection(name) end
-				function tabProxy:addMenu(name) return ensureSection(name) end
+				function tabProxy:AddSection(n) return ensureSection(n) end
+				function tabProxy:addSection(n) return ensureSection(n) end
+				function tabProxy:addMenu(n) return ensureSection(n) end
 				function tabProxy:addToggle(...) return ensureSection("Main"):addToggle(...) end
 				function tabProxy:addDropdown(...) return ensureSection("Main"):addDropdown(...) end
 				function tabProxy:addSlider(...) return ensureSection("Main"):addSlider(...) end
@@ -3518,192 +3404,14 @@ Restock: %s
 		end
 		return api
 	end
-
 	local lua4 = buildWindUICompat()
-	-- ========== end WindUI ==========
 
-	-- ========== Language + Config ==========
-	getgenv().ME_Lang = getgenv().ME_Lang or "zh"
-	local ME_L = {
-		zh = {
-			Home = "主页",
-			["Sub Farm"] = "支线农场",
-			["Sea Event"] = "海事件",
-			Player = "玩家",
-			["Dragon Update"] = "龙更新",
-			Dungeon = "副本",
-			Trials = "试炼",
-			Travel = "传送",
-			["Tiktok Shop"] = "商店",
-			Misc = "其他",
-			Webhook = "Webhook",
-			Settings = "设置",
-			["Auto Farm"] = "自动刷怪",
-			["Take Quest"] = "自动接任务",
-			["Auto Bones"] = "自动骨头",
-			["Enable Mastery"] = "精通农场",
-			["Mastery Method"] = "精通方式",
-			["Health Mob%"] = "残血百分比",
-			["Auto Farm Boss"] = "自动Boss",
-			["Auto Kill All Bosses"] = "击杀全部Boss",
-			["Get Boss Quest"] = "领取Boss任务",
-			["Auto Katakuri"] = "自动蛋糕王子",
-			["Auto Dough King"] = "自动面团王",
-			["Auto Farm Material"] = "自动材料",
-			["Start Farming Chest"] = "自动箱子",
-			["Start Bring"] = "拉怪",
-			["Fast Attack"] = "快速攻击",
-			["Auto Buso"] = "自动武装",
-			["Auto Summon Kill Tyrant Of The Skies"] = "自动天空暴君",
-			["Use Skull Guitar for Vases"] = "骷髅吉他砸花瓶",
-			["Select Weapon"] = "选择武器",
-			["Farm Method"] = "刷怪方式",
-			["Pos Method"] = "站位方式",
-			["Tweening Speed"] = "飞行速度",
-			["Bring Radius"] = "拉怪范围",
-			["Farm Distance"] = "站位高度",
-			Language = "语言",
-			["Save Config"] = "保存配置",
-			["Load Config"] = "加载配置",
-			["Delete Config"] = "删除配置",
-			["Config Name"] = "配置名称",
-			["Config saved"] = "配置已保存",
-			["Config loaded"] = "配置已加载",
-			["Config missing"] = "找不到配置",
-		},
-		en = {
-			Home = "Home",
-			["Sub Farm"] = "Sub Farm",
-			["Sea Event"] = "Sea Event",
-			Player = "Player",
-			["Dragon Update"] = "Dragon Update",
-			Dungeon = "Dungeon",
-			Trials = "Trials",
-			Travel = "Travel",
-			["Tiktok Shop"] = "Shop",
-			Misc = "Misc",
-			Webhook = "Webhook",
-			Settings = "Settings",
-			["Auto Farm"] = "Auto Farm",
-			["Take Quest"] = "Take Quest",
-			["Auto Bones"] = "Auto Bones",
-			["Enable Mastery"] = "Enable Mastery",
-			["Mastery Method"] = "Mastery Method",
-			["Health Mob%"] = "Health Mob %",
-			["Auto Farm Boss"] = "Auto Farm Boss",
-			["Auto Kill All Bosses"] = "Kill All Bosses",
-			["Get Boss Quest"] = "Get Boss Quest",
-			["Auto Katakuri"] = "Auto Katakuri",
-			["Auto Dough King"] = "Auto Dough King",
-			["Auto Farm Material"] = "Auto Material",
-			["Start Farming Chest"] = "Farm Chests",
-			["Start Bring"] = "Bring Mobs",
-			["Fast Attack"] = "Fast Attack",
-			["Auto Buso"] = "Auto Buso",
-			["Auto Summon Kill Tyrant Of The Skies"] = "Auto Tyrant Of The Skies",
-			["Use Skull Guitar for Vases"] = "Skull Guitar Vases",
-			["Select Weapon"] = "Select Weapon",
-			["Farm Method"] = "Farm Method",
-			["Pos Method"] = "Pos Method",
-			["Tweening Speed"] = "Tween Speed",
-			["Bring Radius"] = "Bring Radius",
-			["Farm Distance"] = "Farm Distance",
-			Language = "Language",
-			["Save Config"] = "Save Config",
-			["Load Config"] = "Load Config",
-			["Delete Config"] = "Delete Config",
-			["Config Name"] = "Config Name",
-			["Config saved"] = "Config saved",
-			["Config loaded"] = "Config loaded",
-			["Config missing"] = "Config not found",
-		},
-	}
-	local function ME_T(s)
-		s = tostring(s or "")
-		local lang = getgenv().ME_Lang or "zh"
-		local pack = ME_L[lang] or ME_L.zh
-		return pack[s] or ME_L.en[s] or s
-	end
-	getgenv().ME_T = ME_T
-
-	local ME_Folder = "MoonEclipseHub"
-	local function ME_EnsureFolder()
-		pcall(function()
-			if typeof(isfolder) == "function" and not isfolder(ME_Folder) then
-				makefolder(ME_Folder)
-			end
-		end)
-	end
-	local function ME_ListConfigs()
-		local list = {}
-		pcall(function()
-			if typeof(listfiles) == "function" then
-				for _, f in ipairs(listfiles(ME_Folder) or {}) do
-					local name = tostring(f):match("([^/\\]+)%.json$")
-					if name then table.insert(list, name) end
-				end
-			end
-		end)
-		if #list == 0 then table.insert(list, "default") end
-		return list
-	end
-	local function ME_SaveConfig(name)
-		name = tostring(name or "default"):gsub("[^%w%-%_]", "")
-		if name == "" then name = "default" end
-		ME_EnsureFolder()
-		local payload = {}
-		if tbl then
-			for k, v in pairs(tbl) do
-				if type(v) == "boolean" or type(v) == "number" or type(v) == "string" then
-					payload[k] = v
-				end
-			end
-		end
-		payload._lang = getgenv().ME_Lang or "zh"
-		pcall(function()
-			writefile(ME_Folder .. "/" .. name .. ".json", game:GetService("HttpService"):JSONEncode(payload))
-		end)
-		return true
-	end
-	local function ME_LoadConfig(name)
-		name = tostring(name or "default")
-		local path = ME_Folder .. "/" .. name .. ".json"
-		local ok, data = pcall(function()
-			if isfile and isfile(path) then
-				return game:GetService("HttpService"):JSONDecode(readfile(path))
-			end
-		end)
-		if not ok or type(data) ~= "table" then return false end
-		if tbl then
-			for k, v in pairs(data) do
-				if k ~= "_lang" and (type(v) == "boolean" or type(v) == "number" or type(v) == "string") then
-					tbl[k] = v
-				end
-			end
-		end
-		if data._lang then getgenv().ME_Lang = data._lang end
-		return true
-	end
-	local function ME_DeleteConfig(name)
-		name = tostring(name or "default")
-		pcall(function()
-			if isfile and isfile(ME_Folder .. "/" .. name .. ".json") then
-				delfile(ME_Folder .. "/" .. name .. ".json")
-			end
-		end)
-	end
-	getgenv().ME_SaveConfig = ME_SaveConfig
-	getgenv().ME_LoadConfig = ME_LoadConfig
-	getgenv().ME_DeleteConfig = ME_DeleteConfig
-	getgenv().ME_ListConfigs = ME_ListConfigs
-
-
-	-- lua4 windui
+	-- lua4
 
 	tbl6.SendNotify = function(arg, arg2, arg3, arg4, arg5, arg6)
 		pcall(function()
 			if lua4 and lua4.Notification and lua4.Notification.Notify then
-				lua4.Notification:Notify({ Title = "月食 Hub", Description = tostring(arg3 or arg2 or ""), Buttons = arg5, Id = arg6 }, { Time = arg4 or 5 })
+				lua4.Notification:Notify({ Title = "Eclipse Farm", Description = tostring(arg3 or arg2 or ""), Buttons = arg5, Id = arg6 }, { Time = arg4 or 5 })
 			end
 		end)
 	end
@@ -6089,17 +5797,146 @@ Restock: %s
 
 			if arg2:IsDescendantOf(v2) then
 				if tbl.MasteryFarm then
+					-- Banana Cat FarmMastery logic:
+					-- HP% > HealthMob → Melee only
+					-- HP% <= HealthMob → equip MasteryMethod, awaken if needed, one ready skill + M1
 					if humanoid2 and humanoid2.Health / humanoid2.MaxHealth > (tonumber(tbl.HealthMob) or 25) / 100 then
 						humanoidRootPart2 = nil
 						utilities:EquipWeapon("Melee")
 					else
+						-- residual mastery: equip + skill (no namecall aimbot)
 						humanoidRootPart2 = humanoidRootPart3
-						if (tbl.MasteryMethod or "Blox Fruit") == "Gun" then
-							utilities:EquipWeapon("Gun")
-						else
-							utilities:EquipWeapon("Blox Fruit")
+						position = humanoidRootPart3.Position
+						getgenv().AimPos = humanoidRootPart3.CFrame
+						
+						
+
+						local method = tbl.MasteryMethod or "Blox Fruit"
+						local function nameWeapon(tip, returnObj)
+							local function scan(container)
+								if not container then return nil end
+								for _, e in pairs(container:GetChildren()) do
+									if e:IsA("Tool") and e.ToolTip == tip then
+										return returnObj and e or e.Name
+									end
+								end
+							end
+							return scan(v18.Backpack) or scan(character)
 						end
-						fn14()
+						local jName = nameWeapon(method)
+						local jTool = nameWeapon(method, true)
+
+						if jName and jTool then
+							utilities:EquipWeapon(method)
+							pcall(function()
+								local h = character and character:FindFirstChildOfClass("Humanoid")
+								local t2 = v18.Backpack:FindFirstChild(jName)
+								if h and t2 then h:EquipTool(t2) end
+							end)
+							task.wait(0.08)
+
+							-- re-set aim after equip
+							getgenv().AimPos = humanoidRootPart3.CFrame
+
+							if method == "Gun" and character:FindFirstChild(jName) then
+								pcall(function()
+									local gun = character:FindFirstChild(jName)
+									if gun and gun:FindFirstChild("RemoteEvent") then
+										gun.RemoteEvent:FireServer("TAP", humanoidRootPart3.Position)
+									else
+										v17:CaptureController()
+										v17:ClickButton1(Vector2.new(-1, 1))
+									end
+								end)
+							end
+
+							local needAwaken = false
+							if jName == "Buddha-Buddha" then
+								needAwaken = not (character.HumanoidRootPart and character.HumanoidRootPart:FindFirstChild("Buddha"))
+							elseif jName == "Diamond-Diamond" then
+								needAwaken = not character:FindFirstChild("DiamondBody")
+							elseif jName == "Falcon-Falcon" then
+								needAwaken = not character:FindFirstChild("FalconWings")
+							elseif jName == "Control-Control" then
+								local globe = workspace:FindFirstChild("_WorldOrigin") and workspace._WorldOrigin:FindFirstChild("Globe")
+								needAwaken = not globe
+							end
+							if needAwaken then
+								v8:SendKeyEvent(true, "Z", false, game)
+								v8:SendKeyEvent(false, "Z", false, game)
+							else
+								local function skillReady(tool)
+									if not tool then return "Z" end
+									local ok, skills = pcall(function()
+										return v18.PlayerGui.Main.Skills:FindFirstChild(tool.Name)
+									end)
+									if not ok or not skills then return "Z" end
+									for _, key in ipairs({ "Z", "X", "C", "V" }) do
+										local frame = skills:FindFirstChild(key)
+										if frame and frame:IsA("Frame") and frame.Name ~= "Template" then
+											local title = frame:FindFirstChild("Title")
+											local cd = frame:FindFirstChild("Cooldown")
+											local ready = true
+											if title and title:IsA("TextLabel") then
+												ready = title.TextColor3 == Color3.new(1, 1, 1)
+											end
+											if cd and cd:IsA("GuiObject") then
+												local sz = cd.Size
+												local sx = sz.X.Scale
+												if sx > 0.05 and sx < 0.95 then ready = false end
+											end
+											if ready then return key end
+										end
+									end
+									return "Z"
+								end
+
+								getgenv().AimPos = humanoidRootPart3.CFrame
+
+								if tbl.ManualSkill then
+									-- HAND MODE: equip fruit only, YOU press Z/X/C/V
+								else
+									local key = skillReady(jTool)
+									if key then
+										local hold = 0.5
+										if tbl.UseSkillFastDontHold then hold = 0.05 end
+										v8:SendKeyEvent(true, key, false, game)
+										task.wait(hold)
+										v8:SendKeyEvent(false, key, false, game)
+									end
+
+									-- Banana ClickM1 / UseFruitM1 AFTER skill
+									pcall(function()
+										local fruitName = nameWeapon("Blox Fruit")
+										local tool = fruitName and character:FindFirstChild(fruitName)
+										if not tool then return end
+										local part = humanoidRootPart3
+										local my = character.PrimaryPart or character:FindFirstChild("HumanoidRootPart")
+										if not my then return end
+										local pos = part.Position
+										local dir = (pos - my.Position)
+										dir = dir.Magnitude > 0.05 and dir.Unit or my.CFrame.LookVector
+										local left = tool:FindFirstChild("LeftClickRemote")
+										local rf = tool:FindFirstChild("RemoteFunction")
+										local re = tool:FindFirstChild("RemoteEvent")
+										if left and (fruitName == "Mammoth-Mammoth" or string.find(fruitName, "Mammoth")) then
+											left:FireServer(pos)
+										elseif left then
+											left:FireServer(dir, 1)
+										elseif rf then
+											if re then re:FireServer(pos) end
+											rf:InvokeServer("TAP")
+										end
+										tool:Activate()
+									end)
+									pcall(function()
+										v17:CaptureController()
+										v17:ClickButton1(Vector2.new(-1, 1))
+									end)
+								end
+							end
+						end
+						position = nil
 						humanoidRootPart2 = nil
 					end
 				else
@@ -6303,8 +6140,6 @@ Restock: %s
 
 	tbl6.SubFunction = fn26()
 	local subFunction = tbl6.SubFunction
-
-
 	tbl6.Functions = tbl6.Functions or {}
 	tbl6.Loops = tbl6.Loops or {}
 	tbl6.FunctionList = tbl6.FunctionList or {}
@@ -6367,18 +6202,18 @@ Restock: %s
 	}
 
 	tbl6.LoadLibrary = function()
-		print("[Moon Eclipse] LoadLibrary start")
+		print("[Eclipse Farm] LoadLibrary start")
 		if not lua4 or not lua4.CreateWindow then
 			lua4 = buildWindUICompat()
 		end
 		if not lua4 or not lua4.CreateWindow then
-			warn("[Moon Eclipse ERROR] WindUI failed")
+			warn("[Eclipse Farm ERROR] WindUI failed")
 			return
 		end
 
 		local v22 = lua4:CreateWindow({
-			Title = "Moon Eclipse Hub",
-			Subtitle = "月食 · Blox Fruits",
+			Title = "Eclipse Farm",
+			Subtitle = "Moon Eclipse",
 			Version = "v.Freemium",
 			Key = true,
 			Theme = "Purple",
@@ -6389,7 +6224,7 @@ Restock: %s
 				{ Name = "CudalPH ", Role = "Tester" },
 				{ Name = "Pierce ", Role = "Support" },
 			},
-			SaveFile = "MoonEclipse_BF",
+			SaveFile = "EclipseFarm_BF",
 		})
 
 		local tbl15 = {
@@ -8350,7 +8185,7 @@ Restock: %s
 			end)
 
 			if not ok then
-				warn(string.format("[Moon Eclipse ERROR] Error while building UI Tab '%s':\n%s", arg, tostring(result)))
+				warn(string.format("[Eclipse Farm ERROR] Error while building UI Tab '%s':\n%s", arg, tostring(result)))
 			end
 
 			return ok
@@ -8418,6 +8253,7 @@ Restock: %s
 			tbl16:CreateToggle(v26, "Take Quest", "AcceptQuests", false, { global = true, save = true, description = "Accept Quest for Bones/Cakes" })
 			tbl16:CreateToggle(v26, "Auto Bones", "AutoFarmBones", false, { global = true, save = true, stop = true })
 			tbl16:CreateToggle(v26, "Enable Mastery", "MasteryFarm", false, { global = true, save = true })
+			tbl16:CreateToggle(v26, "Manual Skill (Hand)", "ManualSkill", false, { global = true, save = true })
 			tbl16:CreateDropdown(v26, "Mastery Method", "MasteryMethod", "Blox Fruit", { "Blox Fruit", "Gun" }, { global = true, save = true })
 			tbl16:CreateSlider(v26, "Health Mob%", "HealthMob", 15, 100, 25, { global = true })
 			tbl16:CreateToggle(v26, "Auto Random Surprise", "Auto_Random_Surprise", false, { global = true, save = true })
@@ -14581,44 +14417,6 @@ Restock: %s
 				joinAPI("legendarysword", 2)
 			end
 		end, flag2)
-
-		-- Settings tab: language + config
-		pcall(function()
-			local settingsTab = v22:AddTab("Settings", "settings")
-			local sec = settingsTab:addSection("Settings")
-			local cfgName = "default"
-			sec:addDropdown("Language", getgenv().ME_Lang == "en" and "English" or "中文", { "中文", "English" }, function(v)
-				if v == "English" or v == "en" then
-					getgenv().ME_Lang = "en"
-				else
-					getgenv().ME_Lang = "zh"
-				end
-				tbl6:SendNotify("月食 Hub", (getgenv().ME_Lang == "zh") and "语言已切换（重新执行脚本后标签全量生效）" or "Language set (re-execute for full tab rename)", 4)
-			end)
-			sec:addTextbox("Config Name", function(v)
-				if v and #tostring(v) > 0 then cfgName = tostring(v) end
-			end)
-			sec:addDropdown("Load Config", ME_ListConfigs()[1], ME_ListConfigs(), function(v)
-				cfgName = v
-			end)
-			sec:addButton("Save Config", function()
-				if ME_SaveConfig(cfgName) then
-					tbl6:SendNotify("月食 Hub", ME_T("Config saved") .. ": " .. cfgName, 3)
-				end
-			end)
-			sec:addButton("Load Config", function()
-				if ME_LoadConfig(cfgName) then
-					tbl6:SendNotify("月食 Hub", ME_T("Config loaded") .. ": " .. cfgName, 3)
-				else
-					tbl6:SendNotify("月食 Hub", ME_T("Config missing"), 3)
-				end
-			end)
-			sec:addButton("Delete Config", function()
-				ME_DeleteConfig(cfgName)
-				tbl6:SendNotify("月食 Hub", "OK", 2)
-			end)
-		end)
-
 	end
 
 	tbl6.CoreSetup = function(arg)
@@ -14647,23 +14445,19 @@ Restock: %s
 			v22(tbl6, ...)
 		end
 
-		print(string.format("[Moon Eclipse] %s initialized in %.4fs", arg, tick() - now))
+		print(string.format("[Eclipse Farm] %s initialized in %.4fs", arg, tick() - now))
 	end
 
 	fn27("CoreSetup")
 	fn27("CombatHooks")
 	fn27("RuntimeServices")
-
-
-	
-
 	task.spawn(fn27, "LoadLibrary")
 
 	task.spawn(function()
 		task.wait(1.5)
-		tbl6:SendNotify("Moon Eclipse Fully Loaded", "All Functions, Modules, Dependencies, Successfully loaded.", 8)
+		tbl6:SendNotify("Eclipse Farm Loaded", "All Functions, Modules, Dependencies, Successfully loaded.", 8)
 		task.wait(1)
-		tbl6:SendNotify("Moon Eclipse", "EClipse Farm script is 100% Free and Keyless", 8)
+		tbl6:SendNotify("Eclipse Farm", "Eclipse Farm ready", 8)
 
 		pcall(function()
 			loadstring(game:HttpGet("https://raw.githubusercontent.com/flazhy/QuantumOnyx/refs/heads/main/Util/BloxFruitModule/Preload/Weebo.lua"))()
