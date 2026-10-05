@@ -1,4 +1,5 @@
--- Eclipse Farm · mouse aim mastery · original logic
+-- Eclipse Farm - mouse aim mastery - original logic
+print("[Eclipse Farm] script start")
 
 local RunService = not game and game.GetService and game:GetService("RunService") or game.ClassName ~= "DataModel" or typeof and typeof(game.Players) ~= "Instance"
 
@@ -50,10 +51,8 @@ if not RunService then
 		task.wait()
 	until v.LocalPlayer.PlayerGui:FindFirstChild("Main")
 
-	if getgenv().MoonEclipseActive then
-		return print("Eclipse Farm already running")
-	end
 	getgenv().MoonEclipseActive = true
+	print("[Eclipse Farm] boot")
 	local request_ = nil
 
 	if syn and syn.request then
@@ -3258,9 +3257,20 @@ Restock: %s
 	-- ========== Eclipse Farm WindUI ==========
 	local function ME_HttpGet(url)
 		local body
-		pcall(function()
-			if request then local r = request({Url=url,Method="GET"}); body = r and (r.Body or r.body) end
-		end)
+		local function tryReq(fn)
+			if type(fn) ~= "function" then return end
+			pcall(function()
+				local r = fn({ Url = url, Method = "GET" })
+				if type(r) == "table" then
+					body = r.Body or r.body or r.Data or r.data
+				elseif type(r) == "string" then
+					body = r
+				end
+			end)
+		end
+		pcall(function() tryReq(request) end)
+		if type(body) ~= "string" or #body < 200 then pcall(function() tryReq(syn and syn.request) end) end
+		if type(body) ~= "string" or #body < 200 then pcall(function() tryReq(http_request) end) end
 		if type(body) ~= "string" or #body < 200 then pcall(function() body = game:HttpGet(url) end) end
 		return body
 	end
@@ -3305,15 +3315,33 @@ Restock: %s
 			if getgenv().MoonEclipseWindowObj then return getgenv().MoonEclipseWindowObj end
 			local win; local W=ensureWindUI()
 			if W then
-				for _, conf in ipairs({
+				local attempts = {
 					{Title="Eclipse Farm",Author="Moon Eclipse",Icon="moon",Folder="EclipseFarm",Theme="Dark",Size=UDim2.fromOffset(640,560),Transparent=true,ToggleKey=Enum.KeyCode.RightShift},
+					{Title="Eclipse Farm",Author="Moon Eclipse",Icon="moon"},
+					{Title="Eclipse Farm",Theme="Dark"},
 					{Title="Eclipse Farm"},
-				}) do
-					local ok,w=pcall(function() return W:CreateWindow(conf) end)
-					if ok and w then win=w break end
+				}
+				for i, conf in ipairs(attempts) do
+					local ok,w = pcall(function() return W:CreateWindow(conf) end)
+					if ok and w then
+						win = w
+						print("[Eclipse Farm] CreateWindow ok attempt", i)
+						break
+					else
+						warn("[Eclipse Farm] CreateWindow attempt", i, "failed:", w)
+					end
 				end
+			else
+				warn("[Eclipse Farm] ensureWindUI returned nil")
 			end
-			if win then getgenv().MoonEclipseWindow=win; print("[Eclipse Farm] Window OK") else warn("[Eclipse Farm] Window is NIL") end
+			if win then
+				getgenv().MoonEclipseWindow = win
+				print("[Eclipse Farm] Window OK")
+				pcall(function() if win.Open then win:Open() end end)
+				pcall(function() if win.SetToggleKey then win:SetToggleKey(Enum.KeyCode.RightShift) end end)
+			else
+				warn("[Eclipse Farm] Window is NIL — WindUI CreateWindow failed")
+			end
 			pcall(function()
 				local CoreGui=game:GetService("CoreGui")
 				local old=CoreGui:FindFirstChild("MoonEclipse_OpenIcon"); if old then old:Destroy() end
@@ -6166,64 +6194,102 @@ Restock: %s
 		end
 
 		tbl13.AttackTree = function()
+			-- Tyrant vases: equip Skull Guitar once, TAP only (no Z spam)
 			local eagleBossArena = map:FindFirstChild("TikiOutpost") and map.TikiOutpost:FindFirstChild("IslandModel") and map.TikiOutpost.IslandModel:FindFirstChild("IslandChunks") and map.TikiOutpost.IslandModel.IslandChunks:FindFirstChild("D") and map.TikiOutpost.IslandModel.IslandChunks.D:FindFirstChild("EagleBossArena")
 			if not eagleBossArena then
 				return
 			end
-
 			for _, child in ipairs(eagleBossArena:GetChildren()) do
 				if child.Name == "Tree" and child:IsA("Model") and child:FindFirstChild("Group") then
-					local v22 = child.Group:GetChildren()[1]
-
-					if v22 then
-						local position2 = v22.CFrame.Position
-						tweenManager:topos(v22.CFrame * CFrame.new(0, 15, 0))
-
-						if v18:DistanceFromCharacter(position2) <= 75 then
-							if tbl.ShootGunTyrant then
-								local selectGunTyrant = tbl.SelectGunTyrant or "Skull Guitar"
-								tbl._TyrantLockGun = true
-								pcall(function()
-									tbl6:FireInvoke("LoadItem", "Skull Guitar")
-									tbl6:FireInvoke("LoadItem", selectGunTyrant)
-								end)
-								task.wait(0.4)
-								local skullGuitar = v18.Character:FindFirstChild("Skull Guitar")
-									or v18.Backpack:FindFirstChild("Skull Guitar")
-									or v18.Character:FindFirstChild(selectGunTyrant)
-									or v18.Backpack:FindFirstChild(selectGunTyrant)
-								if skullGuitar and v18.Character:FindFirstChild("Humanoid") then
-									-- equip ONLY skull, do not call EquipWeapon which switches away
-									v18.Character.Humanoid:EquipTool(skullGuitar)
-									task.wait(0.25)
+					local part = child.Group:GetChildren()[1]
+					if part then
+						local position2 = part.CFrame.Position
+						tweenManager:topos(part.CFrame * CFrame.new(0, 12, 0))
+						if v18:DistanceFromCharacter(position2) <= 80 then
+							if tbl.TyrantVaseSkillSpam then
+								-- reference-style: spam selected skills at vase
+								local function listHas(list, key)
+									if list == nil then return key == "Z" end
+									if type(list) == "string" then return list == key end
+									if type(list) ~= "table" then return false end
+									for a, b in pairs(list) do
+										if tostring(b) == key or (b == true and tostring(a) == key) then return true end
+									end
+									return false
 								end
-								local tool = v18.Character:FindFirstChild("Skull Guitar")
-									or v18.Character:FindFirstChildOfClass("Tool")
-								pcall(function() customShoot(position2) end)
+								local VIM = game:GetService("VirtualInputManager")
+								local function press(k)
+									VIM:SendKeyEvent(true, tostring(k), false, game)
+									VIM:SendKeyEvent(false, tostring(k), false, game)
+								end
+								local function equipTip(tip)
+									local hum = v18.Character and v18.Character:FindFirstChildOfClass("Humanoid")
+									if not hum then return end
+									local cur = v18.Character:FindFirstChildOfClass("Tool")
+									if cur and cur.ToolTip == tip then return end
+									for _, tool in ipairs(v18.Backpack:GetChildren()) do
+										if tool:IsA("Tool") and tool.ToolTip == tip then
+											hum:EquipTool(tool)
+											task.wait(0.08)
+											return
+										end
+									end
+								end
+								pcall(function() if ME_UpdateMousePos then ME_UpdateMousePos(position2) end end)
+								local types = tbl.VaseSpamTypes or "Blox Fruit"
+								local skills = tbl.VaseSpamSkills or "Z"
+								local order = { "Melee", "Blox Fruit", "Sword", "Gun" }
+								for _, tip in ipairs(order) do
+									if listHas(types, tip) then
+										equipTip(tip)
+										for _, k in ipairs({ "Z", "X", "C", "V", "F" }) do
+											if listHas(skills, k) then press(k) end
+										end
+									end
+								end
+								task.wait(0.1)
+							elseif tbl.ShootGunTyrant then
+								tbl._TyrantLockGun = true
+								local skull = (v18.Character and v18.Character:FindFirstChild("Skull Guitar"))
+									or (v18.Backpack and v18.Backpack:FindFirstChild("Skull Guitar"))
+								if not skull then
+									pcall(function() tbl6:FireInvoke("LoadItem", "Skull Guitar") end)
+									task.wait(0.35)
+									skull = (v18.Character and v18.Character:FindFirstChild("Skull Guitar"))
+										or (v18.Backpack and v18.Backpack:FindFirstChild("Skull Guitar"))
+								end
+								local hum = v18.Character and v18.Character:FindFirstChildOfClass("Humanoid")
+								if skull and hum then
+									local cur = v18.Character:FindFirstChildOfClass("Tool")
+									if not cur or cur.Name ~= "Skull Guitar" then
+										hum:EquipTool(skull)
+										task.wait(0.2)
+									end
+								end
+								local tool = v18.Character and v18.Character:FindFirstChild("Skull Guitar")
+								pcall(function()
+									if ME_UpdateMousePos then ME_UpdateMousePos(position2) end
+								end)
 								if tool and tool:FindFirstChild("RemoteEvent") then
 									pcall(function() tool.RemoteEvent:FireServer("TAP", position2) end)
-									pcall(function() tool.RemoteEvent:FireServer("TAP", position2 + Vector3.new(0, 1, 0)) end)
-									pcall(function() tool.RemoteEvent:FireServer("TAP", position2 + Vector3.new(0, -1, 0)) end)
 								end
-								-- click
 								pcall(function()
-									game:GetService("VirtualUser"):CaptureController()
-									game:GetService("VirtualUser"):ClickButton1(Vector2.new(0, 0))
+									if customShoot then customShoot(position2) end
 								end)
-								task.wait(0.2)
+								task.wait(0.15)
 								tbl._TyrantLockGun = false
 							else
 								position = position2
-								fn14()
+								pcall(fn14)
 								position = nil
 							end
-
 							break
 						end
 					end
 				end
 			end
 		end
+
 
 		return tbl13
 	end
@@ -6992,18 +7058,35 @@ Restock: %s
 					thread3 = nil
 				end
 
+				-- Roblox kicks ~20min; pulse more often + block Idled
+				pcall(function()
+					v18.Idled:Connect(function()
+						if not tbl.AntiAFK then return end
+						pcall(function()
+							v17:CaptureController()
+							v17:ClickButton2(Vector2.new(0, 0))
+						end)
+					end)
+				end)
+
 				thread3 = task.spawn(function()
 					while tbl.AntiAFK do
-						if v17 then
-							pcall(function()
+						pcall(function()
+							if v17 then
 								v17:CaptureController()
-								v17:ClickButton1(Vector2.new(0, 0))
-							end)
-						end
-
-						task.wait(300)
+								v17:ClickButton1(Vector2.new(math.random(0, 50), math.random(0, 50)))
+							end
+							local VIM = game:GetService("VirtualInputManager")
+							VIM:SendKeyEvent(true, Enum.KeyCode.W, false, game)
+							task.wait(0.05)
+							VIM:SendKeyEvent(false, Enum.KeyCode.W, false, game)
+						end)
+						task.wait(60) -- every 1 min, not 5 min
 					end
 				end)
+			elseif thread3 then
+				task.cancel(thread3)
+				thread3 = nil
 			end
 		end
 
@@ -8379,11 +8462,19 @@ Restock: %s
 				description = "turn on auto skill or gun shooting for destroying vases",
 			})
 
-			tbl16:CreateToggle(v29, "Use Skull Guitar for Vases", "ShootGunTyrant", true, {
+			tbl16:CreateToggle(v29, "Use Skull Guitar for Vases", "ShootGunTyrant", false, {
 				global = true,
 				save = true,
 				description = "Uses Skull Guitar custom shoot to destroy Tyrant vases",
 			})
+
+			tbl16:CreateToggle(v29, "Vase Skill Spam Mode", "TyrantVaseSkillSpam", false, {
+				global = true,
+				save = true,
+				description = "Spam selected skills at vases (like reference) instead of only TAP",
+			})
+			tbl16:CreateDropdown(v29, "Vase Spam Types", "VaseSpamTypes", "Blox Fruit", { "Melee", "Blox Fruit", "Sword", "Gun" }, { global = true, save = true }, true)
+			tbl16:CreateDropdown(v29, "Vase Spam Skills", "VaseSpamSkills", "Z", { "Z", "X", "C", "V", "F" }, { global = true, save = true }, true)
 
 			local v30 = v25:addMenu("Chest Farm")
 			tbl16:CreateToggle(v30, "Start Farming Chest", "AutoChest", false, { global = true, save = true, stop = true })
@@ -8582,32 +8673,21 @@ Restock: %s
 			v30:addButton("Buy New Boat", tbl19.BuyNewBoat or function()
 			end)
 
-			tbl16:CreateToggle(v30, "Protect Boat (Orbit Above You)", "ProtectBoat", true, {
+			tbl16:CreateToggle(v30, "Protect Boat (Float in Combat)", "ProtectBoat", true, {
 				global = true,
 				save = true,
-				description = "Boat circles above your head in combat instead of only floating",
+				description = "Float boat in combat (orbit disabled)",
 			})
 
 			tbl16:CreateToggle(v30, "Auto Buy New Boat When dies", "AutoBuyNewBoatWhendies", false, { global = true })
 			tbl16:CreateToggle(v30, "Auto Reset Charater if boat destroyed", "ResetPlayerdestroyboat", false, { global = true })
 			
-			-- Sea skill spam multi (one row style labels)
-			tbl16:CreateToggle(v30, "Spam Melee Skills [Z/X/C]", "SeaSkillUseMelee", true, { global = true, save = true })
-			tbl16:CreateToggle(v30, "Melee Z", "SeaMeleeZ", true, { global = true, save = true })
-			tbl16:CreateToggle(v30, "Melee X", "SeaMeleeX", true, { global = true, save = true })
-			tbl16:CreateToggle(v30, "Melee C", "SeaMeleeC", true, { global = true, save = true })
-			tbl16:CreateToggle(v30, "Spam Fruit Skills [Z/X/C/V/F]", "SeaSkillUseFruit", true, { global = true, save = true })
-			tbl16:CreateToggle(v30, "Fruit Z", "SeaFruitZ", true, { global = true, save = true })
-			tbl16:CreateToggle(v30, "Fruit X", "SeaFruitX", true, { global = true, save = true })
-			tbl16:CreateToggle(v30, "Fruit C", "SeaFruitC", true, { global = true, save = true })
-			tbl16:CreateToggle(v30, "Fruit V", "SeaFruitV", true, { global = true, save = true })
-			tbl16:CreateToggle(v30, "Fruit F", "SeaFruitF", false, { global = true, save = true })
-			tbl16:CreateToggle(v30, "Spam Sword Skills [Z/X]", "SeaSkillUseSword", false, { global = true, save = true })
-			tbl16:CreateToggle(v30, "Sword Z", "SeaSwordZ", true, { global = true, save = true })
-			tbl16:CreateToggle(v30, "Sword X", "SeaSwordX", true, { global = true, save = true })
-			tbl16:CreateToggle(v30, "Spam Gun Skills [Z/X]", "SeaSkillUseGun", false, { global = true, save = true })
-			tbl16:CreateToggle(v30, "Gun Z", "SeaGunZ", true, { global = true, save = true })
-			tbl16:CreateToggle(v30, "Gun X", "SeaGunX", true, { global = true, save = true })
+			-- multi dropdowns (one row each, multi-select)
+			tbl16:CreateDropdown(v30, "Sea Skills Melee", "SeaMeleeSkills", "Z", { "Z", "X", "C" }, { global = true, save = true }, true)
+			tbl16:CreateDropdown(v30, "Sea Skills Fruit", "SeaFruitSkills", "Z", { "Z", "X", "C", "V", "F" }, { global = true, save = true }, true)
+			tbl16:CreateDropdown(v30, "Sea Skills Sword", "SeaSwordSkills", "Z", { "Z", "X" }, { global = true, save = true }, true)
+			tbl16:CreateDropdown(v30, "Sea Skills Gun", "SeaGunSkills", "Z", { "Z", "X" }, { global = true, save = true }, true)
+			tbl16:CreateDropdown(v30, "Sea Skill Types", "SeaSkillTypes", "Melee", { "Melee", "Blox Fruit", "Sword", "Gun" }, { global = true, save = true }, true)
 
 			tbl16:CreateToggle(v30, "Auto Dodge Terror Shark", "DodgeTerror", true, { global = true, save = true })
 			tbl16:CreateToggle(v30, "Auto Dodge Seabeast", "DodgefSeabeast", true, { global = true, save = true })
@@ -9942,16 +10022,17 @@ Restock: %s
 			end)
 		end, true)
 
-		fn27("AutoActivateObservationHaki", 1.0, function()
-			local char = v18.Character
-			if not char then return end
-			-- game uses KenActive on player (see RemoveObservationEffect)
-			if v18:GetAttribute("KenActive") then return end
+		fn27("AutoActivateObservationHaki", 1.2, function()
+			if v18:GetAttribute("KenActive") == true then return end
 			pcall(function()
 				v4.Remotes.CommE:FireServer("Ken", true)
 			end)
+			-- ONLY E for observation — never Z
 			pcall(function()
-				if remotes and remotes.CommE then remotes.CommE:FireServer("Ken", true) end
+				local VIM = game:GetService("VirtualInputManager")
+				VIM:SendKeyEvent(true, Enum.KeyCode.E, false, game)
+				task.wait(0.08)
+				VIM:SendKeyEvent(false, Enum.KeyCode.E, false, game)
 			end)
 		end)
 
@@ -9964,23 +10045,37 @@ Restock: %s
 		end)
 
 		
-		fn27("AutoActiveRaceV3", 0.5, function()
+		fn27("AutoActiveRaceV3", 0.4, function()
 			local char = v18.Character
 			if not char then return end
+			-- wait for race objects after death/respawn
+			local energy = char:FindFirstChild("RaceEnergy") or char:WaitForChild("RaceEnergy", 1)
+			local transformed = char:FindFirstChild("RaceTransformed")
 			pcall(function()
-				if char:FindFirstChild("RaceEnergy") then
-					local aw = v18.Backpack:FindFirstChild("Awakening") or char:FindFirstChild("Awakening")
-					if aw and aw:FindFirstChild("RemoteFunction") then
-						if (char.RaceEnergy.Value or 0) >= 0.5 then
-							local transformed = char:FindFirstChild("RaceTransformed")
-							if not transformed or not transformed.Value then
-								aw.RemoteFunction:InvokeServer({ true })
-							end
-						end
+				local aw = v18.Backpack:FindFirstChild("Awakening") or char:FindFirstChild("Awakening")
+				if not aw then
+					task.wait(0.3)
+					aw = v18.Backpack:FindFirstChild("Awakening") or char:FindFirstChild("Awakening")
+				end
+				if aw and aw:FindFirstChild("RemoteFunction") then
+					local e = energy and energy.Value or 1
+					local isT = transformed and transformed.Value
+					if e >= 0.3 and not isT then
+						aw.RemoteFunction:InvokeServer({ true })
+					elseif not isT then
+						-- try anyway after respawn
+						aw.RemoteFunction:InvokeServer({ true })
 					end
 				end
 			end)
 			pcall(function() v4.Remotes.CommE:FireServer("ActivateAbility") end)
+			pcall(function()
+				local VIM = game:GetService("VirtualInputManager")
+				for _, k in ipairs({ "Y", "T" }) do
+					VIM:SendKeyEvent(true, k, false, game)
+					VIM:SendKeyEvent(false, k, false, game)
+				end
+			end)
 		end)
 
 		fn27("AutoStartRaceV3", 0.5, function()
@@ -10959,19 +11054,40 @@ Restock: %s
 		end, flag3)
 
 		fn28("AutoTyrantOfTheSkies", function()
-			local enemies2 = utilities:GetEnemies("Tyrant of the Skies")
-			local enemies3 = utilities:GetEnemies(tbl6.DataList.TyrantList)
-			if utilities:CheckMon("Tyrant of the Skies") then
-				return subFunction:Attack(enemies2)
-			end
-
-			if gameData:TyrantEyes() >= 4 then
-				subFunction:AttackTree()
-			else
-				if enemies3 then
-					return subFunction:Attack(enemies3, true)
+			-- find boss anywhere
+			local boss = utilities:GetEnemies("Tyrant of the Skies")
+			if not boss then
+				for _, m in ipairs(workspace.Enemies:GetChildren()) do
+					if m.Name:find("Tyrant") and m:FindFirstChildOfClass("Humanoid") and m.Humanoid.Health > 0 then
+						boss = m
+						break
+					end
 				end
-				tweenManager:topos(CFrame.new(-16257, 22, 1062))
+			end
+			if not boss then
+				for _, m in ipairs(game.ReplicatedStorage:GetChildren()) do
+					if m.Name:find("Tyrant") then
+						-- spawned into workspace when near
+						tweenManager:topos(CFrame.new(-16257, 80, 1062))
+						break
+					end
+				end
+			end
+			if boss then
+				tbl.BringMonster = true
+				tbl._TyrantLockGun = false -- fight boss with normal weapons
+				return subFunction:Attack(boss, true)
+			end
+			local minions = utilities:GetEnemies(tbl6.DataList.TyrantList)
+			local eyes = 0
+			pcall(function() eyes = gameData:TyrantEyes() or 0 end)
+			if eyes >= 4 then
+				subFunction:AttackTree()
+			elseif minions then
+				tbl.BringMonster = true
+				return subFunction:Attack(minions, true)
+			else
+				tweenManager:topos(CFrame.new(-16257, 80, 1062))
 			end
 		end, flag3)
 
@@ -12902,11 +13018,13 @@ Restock: %s
 							tweenManager:topos(humanoidRootPart3.CFrame * CFrame.new(0, 0, -5))
 							task.wait(0.5)
 						elseif typeof(v22.remote[1]) == "table" then
-							for k in next, v22.remote, nil do
-								tbl6:FireInvoke(unpack(args))
+							for _, args in next, v22.remote, nil do
+								if typeof(args) == "table" then
+									pcall(function() tbl6:FireInvoke(unpack(args)) end)
+								end
 							end
 						else
-							tbl6:FireInvoke(unpack(v22.remote))
+							pcall(function() tbl6:FireInvoke(unpack(v22.remote)) end)
 						end
 					end
 				end
@@ -13854,11 +13972,14 @@ Restock: %s
 			end
 			local v22 = utilities:CheckToolName("Dragon Claw")
 
-			if not v22 or v22.Level.Value < 400 then
+			if not v22 or (v22:FindFirstChild("Level") and v22.Level.Value < 400) then
 				tbl.SelectMelee = "Dragon Claw"
-				functions.AutoBuyMelee.Call()
+				pcall(function() functions.AutoBuyMelee.Call() end)
+				-- direct buy attempts
+				pcall(function() tbl6:FireInvoke("BuyItem", "Dragon Claw") end)
+				pcall(function() tbl6:FireInvoke("BuyDragonClaw") end)
 
-				if v22 and v22.Level.Value < 400 then
+				if v22 and v22:FindFirstChild("Level") and v22.Level.Value < 400 then
 					local enemies2 = utilities:GetEnemies("Reborn Skeleton")
 					if enemies2 then
 						return subFunction:Attack(enemies2, true)
@@ -13870,12 +13991,27 @@ Restock: %s
 			end
 
 			if not utilities:CheckToolName("Fire Essence") then
-				tbl6:FireInvoke("Bones", "Buy", 1, 1)
-				task.wait(0.1)
-			else
-				tbl.SelectMelee = "Dragon Talon"
-				functions.AutoBuyMelee.Call()
+				pcall(function() tbl6:FireInvoke("Bones", "Buy", 1, 1) end)
+				task.wait(0.15)
 			end
+			tbl.SelectMelee = "Dragon Talon"
+			pcall(function() functions.AutoBuyMelee.Call() end)
+			-- Dragon Talon specific remotes (BF naming varies)
+			pcall(function() tbl6:FireInvoke("BuyDragonTalon") end)
+			pcall(function() tbl6:FireInvoke("BuyItem", "Dragon Talon") end)
+			pcall(function() tbl6:FireInvoke("DragonTalonProgress", "Buy") end)
+			pcall(function()
+				local m = melees and melees["Dragon Talon"]
+				if m and m.remote then
+					if typeof(m.remote[1]) == "table" then
+						for _, args in ipairs(m.remote) do
+							if typeof(args) == "table" then tbl6:FireInvoke(unpack(args)) end
+						end
+					else
+						tbl6:FireInvoke(unpack(m.remote))
+					end
+				end
+			end)
 		end, flag3)
 
 		fn28("AutoSharkAnchor", function()
@@ -14655,294 +14791,225 @@ Restock: %s
 	fn27("CoreSetup")
 	fn27("CombatHooks")
 	fn27("RuntimeServices")
+	
+	task.spawn(function()
+		local was = false
+		while task.wait(0.3) do
+			if getgenv().MoonEclipseActive and tbl then
+				local on = tbl.AutoFarmSeaEvents == true
+				if was and not on then
+					tbl.AutoSail = false
+					pcall(function()
+						if tweenManager and tweenManager.StopBoatTween then tweenManager:StopBoatTween() end
+						if tweenManager and tweenManager.StopTween then tweenManager:StopTween() end
+					end)
+				end
+				was = on
+			end
+		end
+	end)
+
+	task.spawn(function()
+		print("[Eclipse Farm] calling LoadLibrary")
+		fn27("LoadLibrary")
+	end)
+	task.spawn(function()
+		while task.wait(0.5) do
+			if getgenv().MoonEclipseActive and tbl then
+				if tbl.AutoFarmSeaEvents == true then
+					tbl.AutoSail = true
+				end
+			end
+		end
+	end)
+
+	local function ME_SeaSpamSkills(targetPos)
+		if not tbl then return end
+		local plr = game.Players.LocalPlayer
+		local char = plr.Character
+		local hrp = char and char:FindFirstChild("HumanoidRootPart")
+		local hum = char and char:FindFirstChildOfClass("Humanoid")
+		if not hrp or not hum then return end
+		local VIM = game:GetService("VirtualInputManager")
+		local cam = workspace.CurrentCamera
+
+		local function listHas(list, key)
+			if list == nil then return true end
+			if type(list) == "string" then return list == key end
+			if type(list) ~= "table" then return false end
+			for a, b in pairs(list) do
+				if tostring(b) == key or (b == true and tostring(a) == key) then return true end
+			end
+			return false
+		end
+
+		-- stand VERY close + camlock at target
+		if typeof(targetPos) == "Vector3" then
+			pcall(function()
+				hrp.CFrame = CFrame.new(targetPos + Vector3.new(0, 8, 6), targetPos)
+				if cam then
+					cam.CFrame = CFrame.new(hrp.Position + Vector3.new(0, 2, 0), targetPos)
+				end
+				if ME_UpdateMousePos then ME_UpdateMousePos(targetPos) end
+			end)
+		end
+
+		local function press(k)
+			-- re-lock camera each skill
+			if typeof(targetPos) == "Vector3" and cam then
+				pcall(function()
+					cam.CFrame = CFrame.new(hrp.Position + Vector3.new(0, 2, 0), targetPos)
+					if ME_UpdateMousePos then ME_UpdateMousePos(targetPos) end
+				end)
+			end
+			VIM:SendKeyEvent(true, tostring(k), false, game)
+			task.wait(0.04)
+			VIM:SendKeyEvent(false, tostring(k), false, game)
+			task.wait(0.1)
+		end
+
+		local function equipTip(tip)
+			local cur = char:FindFirstChildOfClass("Tool")
+			if cur and cur.ToolTip == tip then return true end
+			for _, tool in ipairs(plr.Backpack:GetChildren()) do
+				if tool:IsA("Tool") and tool.ToolTip == tip then
+					hum:EquipTool(tool)
+					task.wait(0.15)
+					return true
+				end
+			end
+			return false
+		end
+
+		local types = tbl.SeaSkillTypes
+		local function typeOn(name)
+			if types == nil then return name == "Melee" or name == "Blox Fruit" end
+			return listHas(types, name)
+		end
+
+		-- sequential: finish ALL selected melee skills, THEN fruit, THEN sword, THEN gun
+		local sequence = {
+			{ "Melee", { "Z", "X", "C" }, tbl.SeaMeleeSkills },
+			{ "Blox Fruit", { "Z", "X", "C", "V", "F" }, tbl.SeaFruitSkills },
+			{ "Sword", { "Z", "X" }, tbl.SeaSwordSkills },
+			{ "Gun", { "Z", "X" }, tbl.SeaGunSkills },
+		}
+		for _, entry in ipairs(sequence) do
+			local tip, keys, skillList = entry[1], entry[2], entry[3]
+			if typeOn(tip) then
+				if equipTip(tip) then
+					for _, k in ipairs(keys) do
+						if listHas(skillList, k) then
+							press(k)
+						end
+					end
+				end
+			end
+		end
+	end
+
+	task.spawn(function()
+		while task.wait(0.55) do
+			-- hard stop when sea farm off
+			if not getgenv().MoonEclipseActive or not tbl or tbl.AutoFarmSeaEvents ~= true then
+				-- nothing
+			else
+				local skip = tbl.AutoFindKitsuneIsland or tbl.AutoBlueMoonFarm or tbl.AutoTeleportKitsune
+					or tbl.AutoFindMirageIsland or tbl.AutoTeleportMirage
+					or tbl.AutoFindPrehistoricIsland or tbl.AutoTeleportPrehistoric or tbl.AutoVolcanicEvent
+				if not skip then
+					pcall(function()
+						local hrp = game.Players.LocalPlayer.Character and game.Players.LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+						if not hrp then return end
+						local need = false
+						local nearestPos = nil
+						local nearestD = 1e9
+						for _, folderName in ipairs({"Enemies", "SeaBeasts", "Boats"}) do
+							local folder = workspace:FindFirstChild(folderName)
+							if folder then
+								for _, m in ipairs(folder:GetChildren()) do
+									local root = m:FindFirstChild("HumanoidRootPart") or m.PrimaryPart
+									if root then
+										local d = (root.Position - hrp.Position).Magnitude
+										if d < 280 then
+											local n = m.Name:lower()
+											local hum2 = m:FindFirstChildOfClass("Humanoid")
+											local alive = (not hum2) or hum2.Health > 0
+											if alive and (
+												folderName == "SeaBeasts"
+												or m:GetAttribute("IsBoat")
+												or m:FindFirstChild("Health")
+												or n:find("ship") or n:find("beast") or n:find("terror")
+												or n:find("shark") or n:find("boat") or n:find("seabeast")
+												or n:find("leviathan") or n:find("piranha")
+											) then
+												local owner = m:FindFirstChild("Owner")
+												if not (owner and tostring(owner.Value) == game.Players.LocalPlayer.Name) then
+													need = true
+													if d < nearestD then
+														nearestD = d
+														nearestPos = root.Position
+													end
+												end
+											end
+										end
+									end
+								end
+							end
+						end
+						-- ONLY spam when monster/ship actually present
+						if need and nearestPos then
+							ME_SeaSpamSkills(nearestPos)
+						end
+					end)
+				end
+			end
+		end
+	end)
+
 
 	task.spawn(function()
 		local deadSince = nil
 		while task.wait(1) do
-			if not getgenv().MoonEclipseActive or not tbl then continue end
-			if not tbl.AutoFarmSeaEvents then deadSince = nil continue end
-			pcall(function()
-				local plr = game.Players.LocalPlayer
-				local boats = workspace:FindFirstChild("Boats")
-				local has = false
-				if boats then
-					for _, b in ipairs(boats:GetChildren()) do
-						local owner = b:FindFirstChild("Owner")
-						if owner and tostring(owner.Value) == plr.Name then has = true break end
-					end
-				end
-				if not has then
-					deadSince = deadSince or tick()
-					if tick() - deadSince > 8 then
-						if tbl.AutoBuyNewBoatWhendies then
-							pcall(function() tbl6:FireInvoke("BuyBoat", tbl.BoatSelected or "PirateBrigade") end)
-						end
-						if tbl.ResetPlayerdestroyboat then
-							pcall(function()
-								local char = plr.Character
-								if char and char:FindFirstChild("Humanoid") then
-									char.Humanoid.Health = 0
-								end
-							end)
-						end
-						deadSince = tick()
-					end
-				else
-					deadSince = nil
-				end
-			end)
-		end
-	end)
-
-
-	task.spawn(function()
-		local ang = 0
-		while task.wait(0.12) do
-			if not getgenv().MoonEclipseActive or not tbl then continue end
-			if not tbl.ProtectBoat then continue end
-			if not (tbl.AutoFarmSeaEvents or tbl.AutoSail) then continue end
-			pcall(function()
-				local plr = game.Players.LocalPlayer
-				local char = plr.Character
-				local hrp = char and char:FindFirstChild("HumanoidRootPart")
-				local hum = char and char:FindFirstChildOfClass("Humanoid")
-				if not hrp then return end
-				-- only orbit when in combat / not needing to sail far — if sitting on boat skip
-				local boats = workspace:FindFirstChild("Boats")
-				if not boats then return end
-				local myBoat
-				for _, b in ipairs(boats:GetChildren()) do
-					local owner = b:FindFirstChild("Owner")
-					if owner and tostring(owner.Value) == plr.Name then myBoat = b break end
-					if b:FindFirstChild("VehicleSeat") and hum and hum.SeatPart and hum.SeatPart:IsDescendantOf(b) then myBoat = b break end
-				end
-				if not myBoat then return end
-				local seat = myBoat:FindFirstChild("VehicleSeat") or myBoat:FindFirstChildWhichIsA("VehicleSeat", true)
-				local root = seat or myBoat:FindFirstChildWhichIsA("BasePart", true)
-				if not root then return end
-				ang = (ang + 0.35) % (math.pi * 2)
-				local height = tonumber(tbl.BoatPosY) or 50
-				local radius = 18
-				local target = hrp.Position + Vector3.new(math.cos(ang) * radius, height, math.sin(ang) * radius)
-				-- move boat seat area toward orbit point (client visual / ownership dependent)
+			if getgenv().MoonEclipseActive and tbl and tbl.AutoFarmSeaEvents then
 				pcall(function()
-					if root:IsA("BasePart") then
-						root.CFrame = CFrame.new(target)
+					local plr = game.Players.LocalPlayer
+					local boats = workspace:FindFirstChild("Boats")
+					local has = false
+					if boats then
+						for _, b in ipairs(boats:GetChildren()) do
+							local owner = b:FindFirstChild("Owner")
+							if owner and tostring(owner.Value) == plr.Name then has = true break end
+						end
+					end
+					if not has then
+						deadSince = deadSince or tick()
+						if tick() - deadSince > 8 then
+							if tbl.AutoBuyNewBoatWhendies then
+								pcall(function() tbl6:FireInvoke("BuyBoat", tbl.BoatSelected or "PirateBrigade") end)
+							end
+							if tbl.ResetPlayerdestroyboat then
+								pcall(function()
+									local char = plr.Character
+									if char and char:FindFirstChild("Humanoid") then
+										char.Humanoid.Health = 0
+									end
+								end)
+							end
+							deadSince = tick()
+						end
+					else
+						deadSince = nil
 					end
 				end)
-			end)
-		end
-	end)
-
-
-	local function ME_SeaSpamSkills()
-		if not tbl then return end
-		local VIM = game:GetService("VirtualInputManager")
-		local function press(k)
-			VIM:SendKeyEvent(true, k, false, game)
-			VIM:SendKeyEvent(false, k, false, game)
-		end
-		local function equipTip(tip)
-			local plr = game.Players.LocalPlayer
-			local char = plr.Character
-			local hum = char and char:FindFirstChildOfClass("Humanoid")
-			if not hum then return end
-			local cur = char:FindFirstChildOfClass("Tool")
-			if cur and cur.ToolTip == tip then return end
-			for _, tool in ipairs(plr.Backpack:GetChildren()) do
-				if tool:IsA("Tool") and tool.ToolTip == tip then
-					hum:EquipTool(tool)
-					task.wait(0.12)
-					return
-				end
-			end
-		end
-		if tbl.SeaSkillUseMelee then
-			equipTip("Melee")
-			if tbl.SeaMeleeZ ~= false then press("Z") end
-			if tbl.SeaMeleeX ~= false then press("X") end
-			if tbl.SeaMeleeC ~= false then press("C") end
-		end
-		if tbl.SeaSkillUseFruit then
-			equipTip("Blox Fruit")
-			if tbl.SeaFruitZ ~= false then press("Z") end
-			if tbl.SeaFruitX ~= false then press("X") end
-			if tbl.SeaFruitC ~= false then press("C") end
-			if tbl.SeaFruitV ~= false then press("V") end
-			if tbl.SeaFruitF then press("F") end
-		end
-		if tbl.SeaSkillUseSword then
-			equipTip("Sword")
-			if tbl.SeaSwordZ ~= false then press("Z") end
-			if tbl.SeaSwordX ~= false then press("X") end
-		end
-		if tbl.SeaSkillUseGun then
-			equipTip("Gun")
-			if tbl.SeaGunZ ~= false then press("Z") end
-			if tbl.SeaGunX ~= false then press("X") end
-		end
-	end
-	task.spawn(function()
-		while task.wait(0.45) do
-			if not getgenv().MoonEclipseActive or not tbl or not tbl.AutoFarmSeaEvents then continue end
-			pcall(function()
-				local hrp = game.Players.LocalPlayer.Character and game.Players.LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-				if not hrp then return end
-				local need = false
-				-- ships / seabeasts / skill-only targets
-				for _, folderName in ipairs({ "Enemies", "SeaBeasts", "Boats" }) do
-					local folder = workspace:FindFirstChild(folderName)
-					if folder then
-						for _, m in ipairs(folder:GetChildren()) do
-							local root = m:FindFirstChild("HumanoidRootPart") or m.PrimaryPart or m:FindFirstChildWhichIsA("BasePart")
-							if root and (root.Position - hrp.Position).Magnitude < 350 then
-								local n = m.Name:lower()
-								if folderName == "SeaBeasts" or n:find("ship") or n:find("boat") or n:find("beast") or n:find("terror") or n:find("shark") or m:GetAttribute("IsBoat") then
-									need = true
-									break
-								end
-							end
-						end
-					end
-					if need then break end
-				end
-				if need then ME_SeaSpamSkills() end
-			end)
-		end
-	end)
-
-
-	task.spawn(function()
-		while task.wait(0.5) do
-			if not getgenv().MoonEclipseActive or not tbl then continue end
-			if tbl.AutoFarmSeaEvents then
-				tbl.AutoSail = true
+			else
+				deadSince = nil
 			end
 		end
 	end)
 
 
-	task.spawn(function()
-		while task.wait(0.35) do
-			if not getgenv().MoonEclipseActive or not tbl then continue end
-			if not (tbl.AutoTyrantOfTheSkies and tbl.ShootGunTyrant) then
-				tbl._TyrantLockGun = false
-				continue
-			end
-			tbl._TyrantLockGun = true
-			pcall(function()
-				local char = v18.Character
-				if not char then return end
-				local hum = char:FindFirstChildOfClass("Humanoid")
-				local skull = char:FindFirstChild("Skull Guitar") or v18.Backpack:FindFirstChild("Skull Guitar")
-				if not skull then
-					pcall(function() tbl6:FireInvoke("LoadItem", "Skull Guitar") end)
-					task.wait(0.2)
-					skull = v18.Backpack:FindFirstChild("Skull Guitar")
-				end
-				if skull and hum then
-					local cur = char:FindFirstChildOfClass("Tool")
-					if not cur or cur.Name ~= "Skull Guitar" then
-						hum:EquipTool(skull)
-					end
-				end
-			end)
-		end
-	end)
 
-
-	task.spawn(function()
-		while task.wait(1) do
-			if not getgenv().MoonEclipseActive or not tbl then continue end
-			if not (tbl.AutoSail or tbl.AutoFarmSeaEvents) then continue end
-			pcall(function()
-				local char = game.Players.LocalPlayer.Character
-				local hum = char and char:FindFirstChildOfClass("Humanoid")
-				local hrp = char and char:FindFirstChild("HumanoidRootPart")
-				if not hum or not hrp or hum.Health <= 0 then return end
-				if hum.Sit then return end
-				local boats = workspace:FindFirstChild("Boats")
-				if not boats then return end
-				local best, bestD
-				for _, b in ipairs(boats:GetChildren()) do
-					local seat = b:FindFirstChildWhichIsA("VehicleSeat", true)
-					if seat then
-						local d = (seat.Position - hrp.Position).Magnitude
-						if d < 120 and (not bestD or d < bestD) then
-							best, bestD = seat, d
-						end
-					end
-				end
-				if best then
-					-- noclip off temporarily so seat registers
-					for _, part in ipairs(char:GetDescendants()) do
-						if part:IsA("BasePart") then part.CanCollide = true end
-					end
-					hrp.AssemblyLinearVelocity = Vector3.zero
-					if bestD > 8 then
-						hrp.CFrame = best.CFrame * CFrame.new(0, 3, 0)
-						if tweenManager and tweenManager.topos then
-							pcall(function() tweenManager:topos(best.CFrame * CFrame.new(0, 3, 0)) end)
-						end
-						task.wait(0.2)
-					end
-					hrp.CFrame = best.CFrame * CFrame.new(0, 1.5, 0)
-					task.wait(0.1)
-					pcall(function() best:Sit(hum) end)
-					pcall(function() hum.Sit = true end)
-					pcall(function() hum:ChangeState(Enum.HumanoidStateType.Seated) end)
-				end
-			end)
-		end
-	end)
-
-
-	task.spawn(function()
-		while task.wait(2) do
-			if not getgenv().MoonEclipseActive or not tbl or not tbl.AutoFarmSeaEvents then continue end
-			pcall(function()
-				local char = game.Players.LocalPlayer.Character
-				local hum = char and char:FindFirstChildOfClass("Humanoid")
-				local hrp = char and char:FindFirstChild("HumanoidRootPart")
-				if not hum or not hrp then return end
-				-- if dead, stop sea farm pathing
-				if hum.Health <= 0 then
-					if tweenManager and tweenManager.StopTween then tweenManager:StopTween() end
-					return
-				end
-				-- no seat and not near any boat -> stop endless fly
-				if not hum.Sit then
-					local nearBoat = false
-					for _, b in ipairs(workspace:FindFirstChild("Boats") and workspace.Boats:GetChildren() or {}) do
-						local seat = b:FindFirstChildWhichIsA("VehicleSeat", true)
-						if seat and (seat.Position - hrp.Position).Magnitude < 200 then
-							nearBoat = true
-							break
-						end
-					end
-					if not nearBoat and tbl.ResetPlayerdestroyboat then
-						-- don't path across map; optional reset already user-controlled
-						if tweenManager and tweenManager.StopTween then tweenManager:StopTween() end
-					end
-				end
-			end)
-		end
-	end)
-
-
-
-	task.spawn(fn27, "LoadLibrary")
-
-	task.spawn(function()
-		task.wait(1.5)
-		tbl6:SendNotify("Eclipse Farm Loaded", "All Functions, Modules, Dependencies, Successfully loaded.", 8)
-		task.wait(1)
-		tbl6:SendNotify("Eclipse Farm", "Eclipse Farm ready", 8)
-
-		pcall(function()
-			loadstring(game:HttpGet("https://raw.githubusercontent.com/flazhy/QuantumOnyx/refs/heads/main/Util/BloxFruitModule/Preload/Weebo.lua"))()
-		end)
-	end)
 
 	return
 end
