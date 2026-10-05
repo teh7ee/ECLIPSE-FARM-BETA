@@ -5982,6 +5982,9 @@ Restock: %s
 
 	local function fn26()
 		local tbl13 = { Attack = function(arg, arg2, arg3)
+			if tbl and (tbl.AutoFarm or tbl.AutoFarmBones or tbl.MasteryFarm or tbl.AutoFarmPrince or tbl.AutoFarmBoss) then
+				tbl.BringMonster = true
+			end
 			if not arg2 then
 				return
 			end
@@ -8511,7 +8514,7 @@ Restock: %s
 			tbl16:CreateToggle(v32, "Auto Race V4", "AutoActiveRaceV4", false, { global = true, save = true })
 			tbl16:CreateToggle(v32, "Auto Set Spawn Point", "AutoSetSpawnPoint", false, { global = true, save = true })
 			tbl16:CreateToggle(v32, "Debounce Quests", "QuestDebounce", false, { global = true })
-			tbl16:CreateToggle(v32, "Bypass Get Quest", "BypassGetQuest", false, { global = true, save = true, description = "Gets the quest without teleporting to the quest NPC" })
+			tbl16:CreateToggle(v32, "Bypass Get Quest", "BypassGetQuest", true, { global = true, save = true, description = "Gets the quest without teleporting to the quest NPC" })
 			tbl16:CreateDropdown(v32, "Select Team", "TeamSelectLoad", 1, { "Pirates", "Marines" }, { global = true })
 
 			tbl16:CreateToggle(v32, "Auto Load Script on Load", "AutoLoadScriptonLoad", false, {
@@ -10721,61 +10724,67 @@ Restock: %s
 			if not v22 or not v22[1] or v22[1] == "" then
 				return
 			end
-			local v23 = v22[1]
-			local pos = v22[2]
-			local enemies2 = utilities:GetEnemies(v23)
-			local nearest = gameData:GetNearest()
+			-- CheckQuest: [1]=mob name, [2]=quest id-ish, [3]=level index (original layout varies)
+			local mobName = v22[1]
+			local questId = v22[2]
 			local farmMode = tbl.FarmMode or "Quest"
-			pos = pos and pos:lower():find("submerged")
+			tbl.BringMonster = true
 
-			if not pos then
-				if v23 then
-					pos = v23 == "Reef Bandit" or v23 == "Coral Pirate" or v23 == "Sea Chanter" or v23 == "High Disciple" or v23 == "Grand Devotee"
-				else
-					pos = v23
-				end
-			end
-
-			local v24 = flag3
-
-			if not flag3 then
-				pos = v24
-			end
-
-			if pos and farmMode ~= "Nearest" then
-				if (v18.Character and v18.Character:FindFirstChild("HumanoidRootPart") and v18.Character.HumanoidRootPart.Position.Y or 0) > -500 then
-					if v18:DistanceFromCharacter(Vector3.new(-16269.102, 29.517754, 1372.3204)) > 15 then
-						tweenManager:topos(CFrame.new(-16269.1016, 29.5177539, 1372.3204))
-						task.wait(0.5)
-
-						for i = 1, 2 do
-							net:WaitForChild("RF/SubmarineWorkerSpeak"):InvokeServer("TravelToSubmergedIsland")
-						end
-
-						return
+			-- find living mob by name in workspace (don't stay on NPC)
+			local function findMob(name)
+				if not name or name == "" then return nil end
+				local e = utilities:GetEnemies(name)
+				if e then return e end
+				for _, m in ipairs(workspace.Enemies:GetChildren()) do
+					if m.Name:find(name, 1, true) then
+						local h = m:FindFirstChildOfClass("Humanoid")
+						if h and h.Health > 0 then return m end
 					end
+				end
+				return nil
+			end
+
+			local submerged = type(questId) == "string" and tostring(questId):lower():find("submerged")
+			if not submerged and (mobName == "Reef Bandit" or mobName == "Coral Pirate" or mobName == "Sea Chanter" or mobName == "High Disciple" or mobName == "Grand Devotee") then
+				submerged = true
+			end
+			if submerged and farmMode ~= "Nearest" and flag3 then
+				local y = v18.Character and v18.Character:FindFirstChild("HumanoidRootPart") and v18.Character.HumanoidRootPart.Position.Y or 0
+				if y > -500 and v18:DistanceFromCharacter(Vector3.new(-16269.102, 29.517754, 1372.3204)) > 15 then
+					tweenManager:topos(CFrame.new(-16269.1016, 29.5177539, 1372.3204))
+					task.wait(0.5)
+					for _ = 1, 2 do
+						pcall(function() net:WaitForChild("RF/SubmarineWorkerSpeak"):InvokeServer("TravelToSubmergedIsland") end)
+					end
+					return
 				end
 			end
 
 			if farmMode == "Quest" then
-				if not VerifyQuest(v23) then
-					return GetQuest()
+				-- accept quest if needed, but NEVER loop forever at NPC
+				if tbl.AcceptQuests ~= false and not VerifyQuest(mobName) then
+					-- try accept once then still go hunt if mobs exist
+					pcall(GetQuest)
+					task.wait(0.25)
 				end
-
+				local enemies2 = findMob(mobName)
 				if enemies2 then
 					return subFunction:Attack(enemies2, true)
 				end
-				return utilities:MobsNextSpawn(v23)
+				-- no mob: go spawn, not NPC
+				return utilities:MobsNextSpawn(mobName)
 			end
 
 			if farmMode == "No Quest" then
+				local enemies2 = findMob(mobName)
 				if enemies2 then
 					return subFunction:Attack(enemies2, true)
 				end
-				return utilities:MobsNextSpawn(v23)
+				return utilities:MobsNextSpawn(mobName)
 			end
 
 			if farmMode == "Nearest" then
+				local nearest = gameData:GetNearest()
 				if nearest then
 					return subFunction:Attack(nearest, true)
 				end
@@ -14805,6 +14814,22 @@ Restock: %s
 					end)
 				end
 				was = on
+			end
+		end
+	end)
+
+	
+	task.spawn(function()
+		while task.wait(0.4) do
+			if not getgenv().MoonEclipseActive or not tbl then
+			else
+				if tbl.AutoFarm or tbl.AutoFarmBones or tbl.AutoFarmPrince or tbl.MasteryFarm then
+					tbl.BringMonster = true
+					-- keep farm distance reasonable (not too high / not zero)
+					local py = tonumber(tbl.PosY) or 18
+					if py < 6 then tbl.PosY = 12 end
+					if py > 28 then tbl.PosY = 18 end
+				end
 			end
 		end
 	end)
