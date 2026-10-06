@@ -3316,9 +3316,9 @@ Restock: %s
 			local win; local W=ensureWindUI()
 			if W then
 				local attempts = {
-					{Title="Eclipse Farm",Author="Moon Eclipse",Icon="moon",Folder="EclipseFarm",Theme="Dark",Size=UDim2.fromOffset(640,560),Transparent=true,ToggleKey=Enum.KeyCode.RightShift},
+					{Title="Eclipse Farm",Author="Moon Eclipse · Blox Fruits",Icon="moon",Folder="EclipseFarm",Theme="Dark",Size=UDim2.fromOffset(620,540),MinSize=UDim2.fromOffset(480,360),Transparent=true,Background="rbxassetid://219352734",ToggleKey=Enum.KeyCode.RightShift,HideSearch=false},
+					{Title="Eclipse Farm",Author="Moon Eclipse",Icon="moon",Theme="Dark",Size=UDim2.fromOffset(620,540),Transparent=true,ToggleKey=Enum.KeyCode.RightShift},
 					{Title="Eclipse Farm",Author="Moon Eclipse",Icon="moon"},
-					{Title="Eclipse Farm",Theme="Dark"},
 					{Title="Eclipse Farm"},
 				}
 				for i, conf in ipairs(attempts) do
@@ -3347,8 +3347,11 @@ Restock: %s
 				local old=CoreGui:FindFirstChild("MoonEclipse_OpenIcon"); if old then old:Destroy() end
 				local gui=Instance.new("ScreenGui"); gui.Name="MoonEclipse_OpenIcon"; gui.ResetOnSpawn=false; gui.DisplayOrder=99999; gui.Parent=CoreGui
 				local btn=Instance.new("TextButton"); btn.Size=UDim2.fromOffset(52,52); btn.Position=UDim2.new(1,-68,0.38,0)
-				btn.BackgroundColor3=Color3.fromRGB(28,20,48); btn.Text="月"; btn.TextColor3=Color3.fromRGB(220,210,255)
-				btn.Font=Enum.Font.GothamBold; btn.TextSize=20; btn.Parent=gui; Instance.new("UICorner",btn).CornerRadius=UDim.new(1,0)
+				btn.BackgroundColor3=Color3.fromRGB(18,14,36); btn.Text="月"; btn.TextColor3=Color3.fromRGB(230,220,255)
+				btn.Font=Enum.Font.GothamBold; btn.TextSize=22; btn.Parent=gui
+				Instance.new("UICorner",btn).CornerRadius=UDim.new(1,0)
+				local st=Instance.new("UIStroke"); st.Color=Color3.fromRGB(160,130,255); st.Thickness=1.5; st.Parent=btn
+				local grad=Instance.new("UIGradient"); grad.Color=ColorSequence.new(Color3.fromRGB(40,30,70), Color3.fromRGB(20,15,40)); grad.Rotation=90; grad.Parent=btn
 				btn.MouseButton1Click:Connect(function()
 					pcall(function() local w=getgenv().MoonEclipseWindow; if w then if w.Open then w:Open() elseif w.Toggle then w:Toggle() end end end)
 				end)
@@ -9274,7 +9277,6 @@ Restock: %s
 			v27:addButton("Open Awakenings", tbl19.OpenAwakenings or function()
 			end)
 
-			v25:addMenu("Fake Admin"):addButtonGrid("Admin Panel", tbl17.AdminPanelGrid or {})
 			local v28 = tbl15.Misc:addSection():addMenu("Players Clients")
 			tbl16:CreateToggle(v28, "Remove Observation Effect", "RemoveObservationEffect", false, { global = true, save = true })
 			tbl16:CreateSlider(v28, "Walk Speed", "WalkSpeed", 50, 500, 50, { callback = tbl19.SetWalkSpeed })
@@ -10733,10 +10735,33 @@ Restock: %s
 			-- find living mob by name in workspace (don't stay on NPC)
 			local function findMob(name)
 				if not name or name == "" then return nil end
+				-- 1) exact utilities match
 				local e = utilities:GetEnemies(name)
-				if e then return e end
+				if e then
+					-- verify name really matches quest mob (avoid wrong type)
+					local base = e.Name:gsub("%s*%[.-%]$", "")
+					if base == name or e.Name:find(name, 1, true) == 1 then
+						return e
+					end
+				end
+				-- 2) exact base name in workspace
+				local best, bestD
+				local hrp = v18.Character and v18.Character:FindFirstChild("HumanoidRootPart")
 				for _, m in ipairs(workspace.Enemies:GetChildren()) do
-					if m.Name:find(name, 1, true) then
+					local base = m.Name:gsub("%s*%[.-%]$", "")
+					if base == name then
+						local h = m:FindFirstChildOfClass("Humanoid")
+						local root = m:FindFirstChild("HumanoidRootPart")
+						if h and h.Health > 0 and root then
+							local d = hrp and (root.Position - hrp.Position).Magnitude or 0
+							if not bestD or d < bestD then best, bestD = m, d end
+						end
+					end
+				end
+				if best then return best end
+				-- 3) last resort: starts with quest name (not random substring)
+				for _, m in ipairs(workspace.Enemies:GetChildren()) do
+					if m.Name:find(name, 1, true) == 1 then
 						local h = m:FindFirstChildOfClass("Humanoid")
 						if h and h.Health > 0 then return m end
 					end
